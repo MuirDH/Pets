@@ -10,7 +10,7 @@ import android.net.Uri;
  * {@link ContentProvider} for Pets app.
  */
 
-public class PetProvider extends ContentProvider{
+public class PetProvider extends ContentProvider {
 
     /**
      * Database helper object
@@ -24,6 +24,7 @@ public class PetProvider extends ContentProvider{
 
     /**
      * Initialise the provider and the database helper object.
+     *
      * @return true
      */
     @Override
@@ -35,21 +36,23 @@ public class PetProvider extends ContentProvider{
     /**
      * Perform the query for the given URI. Use the given projection, selection arguments, and sort
      * order.
-     * @param uri is the given URI
-     * @param projection is the given projection
-     * @param selection is the selection
+     *
+     * @param uri           is the given URI
+     * @param projection    is the given projection
+     * @param selection     is the selection
      * @param selectionArgs are the selection arguments
-     * @param sortOrder is the given sort order
+     * @param sortOrder     is the given sort order
      * @return null
      */
     @Override
-    public Cursor query (Uri uri, String[] projection, String selection, String[] selectionArgs,
-                         String sortOrder) {
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+                        String sortOrder) {
         return null;
     }
 
     /**
      * Returns the MIME type of data for the content URI
+     *
      * @param uri is the content URI
      * @return null
      */
@@ -60,7 +63,8 @@ public class PetProvider extends ContentProvider{
 
     /**
      * Insert new data into the provider with the given ContentValues
-     * @param uri is the given URI
+     *
+     * @param uri           is the given URI
      * @param contentValues are the given content values
      * @return null
      */
@@ -71,8 +75,9 @@ public class PetProvider extends ContentProvider{
 
     /**
      * Delete the data at the given selection and selection arguments.
-     * @param uri is the given URI
-     * @param selection is the given selection
+     *
+     * @param uri           is the given URI
+     * @param selection     is the given selection
      * @param selectionArgs is an array of the given selection arguments.
      * @return 0
      */
@@ -83,15 +88,16 @@ public class PetProvider extends ContentProvider{
 
     /**
      * Updates the data at the given selection and selection arguments, with the new ContentValues.
-     * @param uri is the given URI
+     *
+     * @param uri           is the given URI
      * @param contentValues are the new content values
-     * @param selection is the given selection
+     * @param selection     is the given selection
      * @param selectionArgs is an array of the given selection arguments
      * @return 0
      */
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection,
                       String[] selectionArgs) {
-        return  0;
+        return 0;
     }
 }
