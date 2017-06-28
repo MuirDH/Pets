@@ -107,6 +107,14 @@ public final class PetContract {
          * The content URI to access the pet data in the provider.
          */
         public static final Uri CONTENT_URI = Uri.withAppendedPath(BASE_CONTENT_URI, PATH_PETS);
+
+        /**
+         * Returns whether or not the given gender is {@link #GENDER_UNKNOWN}, {@link #GENDER_MALE},
+         * or {@link #GENDER_FEMALE}.
+         */
+        static boolean isValidGender(int gender) {
+            return gender == GENDER_UNKNOWN || gender == GENDER_MALE || gender == GENDER_FEMALE;
+        }
     }
 
 }

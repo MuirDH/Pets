@@ -181,6 +181,26 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues contentValues) {
+        // Check that the name is not null
+        String name = contentValues.getAsString(PetEntry.COLUMN_PET_NAME);
+        if (name == null) {
+            throw new IllegalArgumentException("Pet requires a name");
+        }
+
+        // Check that the Gender is not null and is one of the valid gender types
+        Integer gender = contentValues.getAsInteger(PetEntry.COLUMN_PET_GENDER);
+        if (gender == null || !PetEntry.isValidGender(gender)){
+            throw new IllegalArgumentException("Pet requires a valid gender");
+        }
+
+        // Check that the Weight is greater than or equal to 0kg
+        Integer weight = contentValues.getAsInteger(PetEntry.COLUMN_PET_WEIGHT);
+        if (weight != null && weight < 0){
+            throw  new IllegalArgumentException("Pet requires a valid weight");
+        }
+
+        // No need to check the breed as any value in valid (including null).
+
         final int match = uriMatcher.match(uri);
         switch (match) {
             case PETS:
