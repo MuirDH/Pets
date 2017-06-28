@@ -34,24 +34,24 @@ public class PetProvider extends ContentProvider {
      */
     private static final UriMatcher uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
-    /**
+    /*
      * Static initializer. This is run the first time anything is called from this class.
      */
     static {
-        /**
+        /*
          * The calls to addURI() go here, for all of the content URI patterns that the provider
          * should recognise. All paths added to the UriMatcher have a corresponding code to return
          * when a match is found.
          */
 
-        /**
+        /*
          * The content URI fo the form "content://com.example.android.pets/pets" will map to the
          * integer code {@link #PETS}. This URI is used to provide access to MULTIPLE rows of the
          * pets table.
          */
         uriMatcher.addURI(CONTENT_AUTHORITY, PATH_PETS, PETS);
 
-        /**
+        /*
          * The content URI of the form "content://com.example.android.pets/pets/#" will map to the
          * integer code {@link #PET_ID}. This URI is used to proivde access to ONE single row of the
          * pets table.
@@ -117,7 +117,7 @@ public class PetProvider extends ContentProvider {
 
         switch (match) {
             case PETS:
-                /**
+                /*
                  * for the PETS code, query the pets table directly with the given projection,
                  * selection, selection arguments, and sort order. The cursor could contain multiple
                  * rows of the pets table.
@@ -127,7 +127,7 @@ public class PetProvider extends ContentProvider {
 
                 break;
             case PET_ID:
-                /**
+                /*
                  * For the PET_ID code, extract out the ID from the URI. For an example URI such as
                  * "content://com.example.android.pets/pets/3", the selection will be "_id=?" and
                  * the selection argument will be a String array containing the actual ID of 3 in
@@ -143,7 +143,7 @@ public class PetProvider extends ContentProvider {
                         String.valueOf(ContentUris.parseId(uri))
                 };
 
-                /**
+                /*
                  * This will perform a query on the pets table where the _id equals 3 to return a
                  * Cursor containing that row of the table.
                  */
