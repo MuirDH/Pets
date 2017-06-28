@@ -33,13 +33,13 @@ public final class PetContract {
      * content authority is the package name for the app, which is guaranteed to be unique on the
      * device.
      */
-    public static final String CONTENT_AUTHORITY = "com.example.android.pets";
+    static final String CONTENT_AUTHORITY = "com.example.android.pets";
 
     /**
      * Use CONTENT_AUTHORITY to create the base of all URI's which apps will use to contact the
      * content provider.
      */
-    public static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
+    private static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
 
     /**
      * Possible path (appended to base content URI for possible URI's).
@@ -47,7 +47,7 @@ public final class PetContract {
      * data. content://com.example.android.pets/staff/ will fail, as the ContentProvider hasn't
      * been given any information on what to do with "staff".
      */
-    public static final String PATH_PETS = "pets";
+    static final String PATH_PETS = "pets";
 
     /**
      * Inner class that defines constant values for the pets database table.

@@ -7,6 +7,7 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 
 import static com.example.android.pets.data.PetContract.*;
 
@@ -97,20 +98,20 @@ public class PetProvider extends ContentProvider {
      * @return cursor;
      */
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+    public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs,
                         String sortOrder) {
 
-        /**
+        /*
          * Get readable database
          */
         SQLiteDatabase database = dbHelper.getReadableDatabase();
 
-        /**
+        /*
          * This cursor will hold the result of the query
          */
         Cursor cursor;
 
-        /**
+        /*
          * Figure out if the URI matcher can match the URI to a specific code.
          */
         int match = uriMatcher.match(uri);
@@ -164,7 +165,7 @@ public class PetProvider extends ContentProvider {
      * @return null
      */
     @Override
-    public String getType(Uri uri) {
+    public String getType(@NonNull Uri uri) {
         return null;
     }
 
@@ -176,7 +177,7 @@ public class PetProvider extends ContentProvider {
      * @return null
      */
     @Override
-    public Uri insert(Uri uri, ContentValues contentValues) {
+    public Uri insert(@NonNull Uri uri, ContentValues contentValues) {
         return null;
     }
 
@@ -189,7 +190,7 @@ public class PetProvider extends ContentProvider {
      * @return 0
      */
     @Override
-    public int delete(Uri uri, String selection, String[] selectionArgs) {
+    public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
         return 0;
     }
 
@@ -203,7 +204,7 @@ public class PetProvider extends ContentProvider {
      * @return 0
      */
     @Override
-    public int update(Uri uri, ContentValues contentValues, String selection,
+    public int update(@NonNull Uri uri, ContentValues contentValues, String selection,
                       String[] selectionArgs) {
         return 0;
     }
