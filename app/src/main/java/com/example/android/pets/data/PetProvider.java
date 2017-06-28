@@ -181,6 +181,19 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues contentValues) {
+
+        validatePet(contentValues);
+
+        final int match = uriMatcher.match(uri);
+        switch (match) {
+            case PETS:
+                return insertPet(uri, contentValues);
+            default:
+                throw new IllegalArgumentException("Insertion is not supported for " + uri);
+        }
+    }
+
+    public void validatePet(ContentValues contentValues) {
         // Check that the name is not null
         String name = contentValues.getAsString(PetEntry.COLUMN_PET_NAME);
         if (name == null) {
@@ -200,14 +213,6 @@ public class PetProvider extends ContentProvider {
         }
 
         // No need to check the breed as any value is valid (including null).
-
-        final int match = uriMatcher.match(uri);
-        switch (match) {
-            case PETS:
-                return insertPet(uri, contentValues);
-            default:
-                throw new IllegalArgumentException("Insertion is not supported for " + uri);
-        }
     }
 
     /*
@@ -260,7 +265,7 @@ public class PetProvider extends ContentProvider {
         final int match = uriMatcher.match(uri);
         switch (match) {
             case PETS:
-                return updatePet(uri, contentValues, selection, selectionArgs);
+                return updatePet(contentValues, selection, selectionArgs);
             case PET_ID:
                 /*
                  * for the PET_ID code, extract out the ID from the URI, so we know which row to
@@ -269,7 +274,7 @@ public class PetProvider extends ContentProvider {
                  */
                 selection = PetEntry._ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri))};
-                return updatePet(uri, contentValues, selection, selectionArgs);
+                return updatePet(contentValues, selection, selectionArgs);
             default:
                 throw new IllegalArgumentException("Update is not supported for " + uri);
         }
@@ -280,12 +285,24 @@ public class PetProvider extends ContentProvider {
      * specified in the selection and selection arguments (which cold be 0 or 1 or more pets).
      * Return the number of rows that were successfully updated.
      */
-    private int updatePet(Uri uri, ContentValues contentValues, String selection,
+    private int updatePet(ContentValues contentValues, String selection,
                           String[] selectionArgs) {
-        /*
-         * If the {@link PetEntry#COLUMN_PET_NAME} key is present, check that the name value is not
-         * null.
-         */
+
+        if (validatePetUpdate(contentValues)) return 0;
+
+
+        // Otherwise get writable database to update the data
+        SQLiteDatabase database = dbHelper.getWritableDatabase();
+
+        // Returns the number of database rows affected by the update statement.
+        return database.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+    }
+
+    public boolean validatePetUpdate(ContentValues contentValues) {
+    /*
+     * If the {@link PetEntry#COLUMN_PET_NAME} key is present, check that the name value is not
+     * null.
+     */
         if (contentValues.containsKey(PetEntry.COLUMN_PET_NAME)) {
             String name = contentValues.getAsString(PetEntry.COLUMN_PET_NAME);
             if (name == null)
@@ -303,7 +320,7 @@ public class PetProvider extends ContentProvider {
         }
 
         /*
-         *If the {@link PetEntry#COLUMN_PET_WEIGHT} key is present, chekc that the weight value is
+         *If the {@link PetEntry#COLUMN_PET_WEIGHT} key is present, check that the weight value is
          * valid.
          */
         if (contentValues.containsKey(PetEntry.COLUMN_PET_WEIGHT)) {
@@ -316,13 +333,6 @@ public class PetProvider extends ContentProvider {
         // No need to check the breed as any value is valid (including null).
 
         // If there are no values to update, then don't try to update the database
-        if (contentValues.size() == 0)
-            return 0;
-
-        // Otherwise get writable database to update the data
-        SQLiteDatabase database = dbHelper.getWritableDatabase();
-
-        // Returns the number of database rows affected by the update statement.
-        return database.update(PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+        return contentValues.size() == 0;
     }
 }
