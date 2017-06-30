@@ -15,5 +15,8 @@
 
     <!-- Common margin value used throughout the app -->
     <dimen name="activity_margin">16dp</dimen>
+    
+    <!-- Top padding of empty subtitle text -->
+    <dimen name="empty_subtitle_padding">8dp</dimen>
 </resources>
 
