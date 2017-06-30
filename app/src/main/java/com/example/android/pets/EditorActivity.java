@@ -16,6 +16,7 @@
 package com.example.android.pets;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
@@ -37,16 +38,24 @@ import com.example.android.pets.data.PetContract.PetEntry;
  */
 public class EditorActivity extends AppCompatActivity {
 
-    /** EditText field to enter the pet's name */
+    /**
+     * EditText field to enter the pet's name
+     */
     private EditText mNameEditText;
 
-    /** EditText field to enter the pet's breed */
+    /**
+     * EditText field to enter the pet's breed
+     */
     private EditText mBreedEditText;
 
-    /** EditText field to enter the pet's weight */
+    /**
+     * EditText field to enter the pet's weight
+     */
     private EditText mWeightEditText;
 
-    /** EditText field to enter the pet's gender */
+    /**
+     * EditText field to enter the pet's gender
+     */
     private Spinner mGenderSpinner;
 
     /**
@@ -60,6 +69,24 @@ public class EditorActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+
+        /**
+         * Examine the intent that was used to launch this activity, in order to figure out if we're
+         * creating a new pet or editing an existing one.
+         */
+        Intent intent = getIntent();
+        Uri currentPetUri = intent.getData();
+
+        /**
+         * If the intent DOES NOT contain a pet content URI, then we know that we're creating a new
+         * pet.
+         */
+        if (currentPetUri == null) {
+            // this is a new pet, so change the app bar to say "Add a pet"
+            setTitle("Add a Pet");
+        } else
+            // Otherwise this is an existing pet, so change app bar to say "Edit Pet"
+            setTitle("Edit Pet");
 
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
