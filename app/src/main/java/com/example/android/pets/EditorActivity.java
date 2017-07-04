@@ -59,29 +59,29 @@ public class EditorActivity extends AppCompatActivity implements
     /**
      * EditText field to enter the pet's name
      */
-    private EditText mNameEditText;
+    private EditText nameEditText;
 
     /**
      * EditText field to enter the pet's breed
      */
-    private EditText mBreedEditText;
+    private EditText breedEditText;
 
     /**
      * EditText field to enter the pet's weight
      */
-    private EditText mWeightEditText;
+    private EditText weightEditText;
 
     /**
      * EditText field to enter the pet's gender
      */
-    private Spinner mGenderSpinner;
+    private Spinner genderSpinner;
 
     /**
      * Gender of the pet. The possible valid values are in the PetContract.java file:
      * {@link PetEntry#GENDER_UNKNOWN}, {@link PetEntry#GENDER_MALE}, or
      * {@link PetEntry#GENDER_FEMALE}.
      */
-    private int mGender = PetEntry.GENDER_UNKNOWN;
+    private int gender = PetEntry.GENDER_UNKNOWN;
 
 
     /**
@@ -106,10 +106,34 @@ public class EditorActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 
+
+        // Examine the intent that was used to launch this activity, in order to figure out if we're
+        //creating a new pet or editing an existing one.
+        isNewPet();
+
+
+        // Find all relevant views that we will need to read user input from
+        nameEditText = (EditText) findViewById(R.id.edit_pet_name);
+        breedEditText = (EditText) findViewById(R.id.edit_pet_breed);
+        weightEditText = (EditText) findViewById(R.id.edit_pet_weight);
+        genderSpinner = (Spinner) findViewById(R.id.spinner_gender);
+
         /*
-         * Examine the intent that was used to launch this activity, in order to figure out if we're
-         * creating a new pet or editing an existing one.
+         * Setup OnTouchListeners on all the input fields, so we can determine if the user has
+         * touched or modified them. This will let us know if there are unsaved changes or not, if
+         * the user tries to leave the editor without saving
          */
+        nameEditText.setOnTouchListener(touchListener);
+        breedEditText.setOnTouchListener(touchListener);
+        weightEditText.setOnTouchListener(touchListener);
+        genderSpinner.setOnTouchListener(touchListener);
+
+        setupSpinner();
+
+    }
+
+    private void isNewPet() {
+
         Intent intent = getIntent();
         currentPetUri = intent.getData();
 
@@ -137,25 +161,6 @@ public class EditorActivity extends AppCompatActivity implements
             getLoaderManager().initLoader(EXISTING_PET_LOADER, null, this);
 
         }
-
-        // Find all relevant views that we will need to read user input from
-        mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
-        mBreedEditText = (EditText) findViewById(R.id.edit_pet_breed);
-        mWeightEditText = (EditText) findViewById(R.id.edit_pet_weight);
-        mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
-
-        /*
-         * Setup OnTouchListeners on all the input fields, so we can determine if the user has
-         * touched or modified them. This will let us know if there are unsaved changes or not, if
-         * the user tries to leave the editor without saving
-         */
-        mNameEditText.setOnTouchListener(touchListener);
-        mBreedEditText.setOnTouchListener(touchListener);
-        mWeightEditText.setOnTouchListener(touchListener);
-        mGenderSpinner.setOnTouchListener(touchListener);
-
-        setupSpinner();
-
     }
 
     /**
@@ -171,20 +176,20 @@ public class EditorActivity extends AppCompatActivity implements
         genderSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
 
         // Apply the adapter to the spinner
-        mGenderSpinner.setAdapter(genderSpinnerAdapter);
+        genderSpinner.setAdapter(genderSpinnerAdapter);
 
         // Set the integer mSelected to the constant values
-        mGenderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        genderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selection = (String) parent.getItemAtPosition(position);
                 if (!TextUtils.isEmpty(selection)) {
                     if (selection.equals(getString(R.string.gender_male))) {
-                        mGender = PetEntry.GENDER_MALE;
+                        gender = PetEntry.GENDER_MALE;
                     } else if (selection.equals(getString(R.string.gender_female))) {
-                        mGender = PetEntry.GENDER_FEMALE;
+                        gender = PetEntry.GENDER_FEMALE;
                     } else {
-                        mGender = PetEntry.GENDER_UNKNOWN;
+                        gender = PetEntry.GENDER_UNKNOWN;
                     }
                 }
             }
@@ -192,7 +197,7 @@ public class EditorActivity extends AppCompatActivity implements
             // Because AdapterView is an abstract class, onNothingSelected must be defined
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                mGender = PetEntry.GENDER_UNKNOWN;
+                gender = PetEntry.GENDER_UNKNOWN;
             }
         });
     }
@@ -201,43 +206,39 @@ public class EditorActivity extends AppCompatActivity implements
      * Get user input from editor and save new pet into database.
      */
     private void savePet() {
-            // Read from input fields
-            // Use trim to eliminate leading or trailing white space
-            String nameString = mNameEditText.getText().toString().trim();
-            String breedString = mBreedEditText.getText().toString().trim();
-            String weightString = mWeightEditText.getText().toString().trim();
+        // Read from input fields
+        // Use trim to eliminate leading or trailing white space
+        String nameString = nameEditText.getText().toString().trim();
+        String breedString = breedEditText.getText().toString().trim();
+        String weightString = weightEditText.getText().toString().trim();
 
-            // Check if this is supposed to be a new pet and check if all the fields in the editor
-            // are blank.
-            if (currentPetUri == null && TextUtils.isEmpty(nameString)
-                    && TextUtils.isEmpty(breedString) && TextUtils.isEmpty(weightString)
-                    && mGender == PetEntry.GENDER_UNKNOWN)
-            /*
-             * Since no fields were modified, we can return early without creating a new pet. No
-             * need to crate ContentValues and no need to do any ContentProvider operations.
-             */
-                return;
+        if (blankFields(nameString, breedString, weightString)) return;
 
-            // Create a ContentValues object where column names are the keys,
-            // and pet attributes from the editor are the values.
+
+        // Create a ContentValues object where column names are the keys,
+        // and pet attributes from the editor are the values.
         ContentValues values = new ContentValues();
-            values.put(PetEntry.COLUMN_PET_NAME, nameString);
-            values.put(PetEntry.COLUMN_PET_BREED, breedString);
-            values.put(PetEntry.COLUMN_PET_GENDER, mGender);
+        values.put(PetEntry.COLUMN_PET_NAME, nameString);
+        values.put(PetEntry.COLUMN_PET_BREED, breedString);
+        values.put(PetEntry.COLUMN_PET_GENDER, gender);
 
-            /*
-             * If the weight is not provided by the user, don't try to parse the string into an
-             * integer value. Use 0 by default.
-             */
-            int weight = 0;
+        /*
+         * If the weight is not provided by the user, don't try to parse the string into an
+         * integer value. Use 0 by default.
+         */
+        int weight = 0;
 
-            if (!TextUtils.isEmpty(weightString)) {
-                weight = Integer.parseInt(weightString);
-            }
-            values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
+        if (!TextUtils.isEmpty(weightString)) {
+            weight = Integer.parseInt(weightString);
+        }
+        values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
 
-            // Determine if this is a new or existing pet by checking if currentPetUri is null or not
-            if (currentPetUri == null){
+        // Determine if this is a new or existing pet by checking if currentPetUri is null or not
+        newOrExistingPet(values);
+    }
+
+    private void newOrExistingPet(ContentValues values) {
+        if (currentPetUri == null) {
 
             // Insert a new pet into the provider, returning the content URI for the new pet.
             Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
@@ -270,6 +271,14 @@ public class EditorActivity extends AppCompatActivity implements
         }
     }
 
+    private boolean blankFields(String nameString, String breedString, String weightString) {
+        // Check if this is supposed to be a new pet and check if all the fields in the editor
+        // are blank.
+        return currentPetUri == null && TextUtils.isEmpty(nameString)
+                && TextUtils.isEmpty(breedString) && TextUtils.isEmpty(weightString)
+                && gender == PetEntry.GENDER_UNKNOWN;
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu options from the res/menu/menu_editor.xml file.
@@ -281,6 +290,7 @@ public class EditorActivity extends AppCompatActivity implements
     /**
      * this method is called after invalidateOptionsMenu(), so that the menu can be updated (some
      * menu items can be hidden or made visible).
+     *
      * @param menu is the options menu
      * @return true with the "Delete" menu item rendered invisible
      */
@@ -289,7 +299,7 @@ public class EditorActivity extends AppCompatActivity implements
         super.onPrepareOptionsMenu(menu);
 
         // If this is a new pet, hide the "Delete" menu item.
-        if (currentPetUri == null){
+        if (currentPetUri == null) {
             MenuItem menuItem = menu.findItem(R.id.action_delete);
             menuItem.setVisible(false);
         }
@@ -420,9 +430,9 @@ public class EditorActivity extends AppCompatActivity implements
             int weight = cursor.getInt(weightColumnIndex);
 
             // Update the views on the screen with the values from the database
-            mNameEditText.setText(name);
-            mBreedEditText.setText(breed);
-            mWeightEditText.setText(Integer.toString(weight));
+            nameEditText.setText(name);
+            breedEditText.setText(breed);
+            weightEditText.setText(Integer.toString(weight));
 
             /*
              * Gender is a dropdown spinner, so map the constant value from the database into one of
@@ -431,13 +441,13 @@ public class EditorActivity extends AppCompatActivity implements
              */
             switch (gender) {
                 case PetEntry.GENDER_MALE:
-                    mGenderSpinner.setSelection(1);
+                    genderSpinner.setSelection(1);
                     break;
                 case PetEntry.GENDER_FEMALE:
-                    mGenderSpinner.setSelection(2);
+                    genderSpinner.setSelection(2);
                     break;
                 default:
-                    mGenderSpinner.setSelection(0);
+                    genderSpinner.setSelection(0);
                     break;
             }
         }
@@ -448,10 +458,10 @@ public class EditorActivity extends AppCompatActivity implements
     public void onLoaderReset(Loader<Cursor> loader) {
 
         // If the loader is invalidated, clear out all the data from the input fields.
-        mNameEditText.setText("");
-        mBreedEditText.setText("");
-        mWeightEditText.setText("");
-        mGenderSpinner.setSelection(0); // Select "Unknown" gender
+        nameEditText.setText("");
+        breedEditText.setText("");
+        weightEditText.setText("");
+        genderSpinner.setSelection(0); // Select "Unknown" gender
 
     }
 
@@ -496,10 +506,10 @@ public class EditorActivity extends AppCompatActivity implements
          * Create an AlertDialog.Builder and set the message, and click listeners for the positive
          * and negative button on the dialog
          */
-        AlertDialog.Builder builder = new  AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.delete_dialog_msg);
         builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id){
+            public void onClick(DialogInterface dialog, int id) {
                 // User clicked the "Delete" button, so delete the pet.
                 deletePet();
             }
@@ -537,7 +547,7 @@ public class EditorActivity extends AppCompatActivity implements
                 // If no rows were deleted, then there was an error with the delete.
                 Toast.makeText(this, getString(R.string.editor_delete_pet_failed),
                         Toast.LENGTH_SHORT).show();
-            }else {
+            } else {
                 // Otherwise, the delete was successful and we can display a toast.
                 Toast.makeText(this, getString(R.string.editor_delete_pet_successful),
                         Toast.LENGTH_SHORT).show();
