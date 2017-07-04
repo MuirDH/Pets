@@ -18,16 +18,19 @@ package com.example.android.pets;
 import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.CursorLoader;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -40,9 +43,18 @@ import com.example.android.pets.data.PetContract.PetEntry;
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class EditorActivity extends AppCompatActivity implements
+        LoaderManager.LoaderCallbacks<Cursor> {
 
+    /**
+     * Identifier for the pet data loader.
+     */
     private static final int EXISTING_PET_LOADER = 0;
+
+    /**
+     * Content URI for the existing pet (null if it's a new pet).
+     */
+    private Uri currentPetUri;
 
     /**
      * EditText field to enter the pet's name
@@ -70,30 +82,61 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
      * {@link PetEntry#GENDER_FEMALE}.
      */
     private int mGender = PetEntry.GENDER_UNKNOWN;
-    private Uri currentPetUri;
+
+
+    /**
+     * Boolean flag that keeps track of whether the pet has been edited (true) or not (false)
+     */
+    private boolean petHasChanged = false;
+
+    /**
+     * OnTouchListener that listens for any user touches on a View, implying that they are modifying
+     * the view, and we change the petHasChanged boolean to true.
+     */
+    private View.OnTouchListener touchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            petHasChanged = true;
+            return false;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 
-        /**
+        /*
          * Examine the intent that was used to launch this activity, in order to figure out if we're
          * creating a new pet or editing an existing one.
          */
         Intent intent = getIntent();
         currentPetUri = intent.getData();
 
-        /**
+        /*
          * If the intent DOES NOT contain a pet content URI, then we know that we're creating a new
          * pet.
          */
         if (currentPetUri == null) {
             // this is a new pet, so change the app bar to say "Add a pet"
-            setTitle("Add a Pet");
-        } else
+            setTitle(getString(R.string.editor_activity_title_new_pet));
+
+            /*
+             * Invalidate the options menu, so the "Delete" menu option can be hidden. (It doesn't
+             * make sense to delete a pet that hasn't been created yet.
+             */
+            invalidateOptionsMenu();
+        } else {
             // Otherwise this is an existing pet, so change app bar to say "Edit Pet"
-            setTitle("Edit Pet");
+            setTitle(getString(R.string.editor_activity_title_edit_pet));
+
+            /*
+             * Initalise a loader to read the pet data from the database and display the current
+             * values in the editor
+             */
+            getLoaderManager().initLoader(EXISTING_PET_LOADER, null, this);
+
+        }
 
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
@@ -101,10 +144,18 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         mWeightEditText = (EditText) findViewById(R.id.edit_pet_weight);
         mGenderSpinner = (Spinner) findViewById(R.id.spinner_gender);
 
+        /*
+         * Setup OnTouchListeners on all the input fields, so we can determine if the user has
+         * touched or modified them. This will let us know if there are unsaved changes or not, if
+         * the user tries to leave the editor without saving
+         */
+        mNameEditText.setOnTouchListener(touchListener);
+        mBreedEditText.setOnTouchListener(touchListener);
+        mWeightEditText.setOnTouchListener(touchListener);
+        mGenderSpinner.setOnTouchListener(touchListener);
+
         setupSpinner();
 
-        // Initialise the loader
-        getLoaderManager().initLoader(EXISTING_PET_LOADER, null, this);
     }
 
     /**
@@ -150,22 +201,43 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
      * Get user input from editor and save new pet into database.
      */
     private void savePet() {
-        ContentValues values = new ContentValues();
-
-        if (currentPetUri == null) {
             // Read from input fields
             // Use trim to eliminate leading or trailing white space
             String nameString = mNameEditText.getText().toString().trim();
             String breedString = mBreedEditText.getText().toString().trim();
             String weightString = mWeightEditText.getText().toString().trim();
-            int weight = Integer.parseInt(weightString);
+
+            // Check if this is supposed to be a new pet and check if all the fields in the editor
+            // are blank.
+            if (currentPetUri == null && TextUtils.isEmpty(nameString)
+                    && TextUtils.isEmpty(breedString) && TextUtils.isEmpty(weightString)
+                    && mGender == PetEntry.GENDER_UNKNOWN)
+            /*
+             * Since no fields were modified, we can return early without creating a new pet. No
+             * need to crate ContentValues and no need to do any ContentProvider operations.
+             */
+                return;
 
             // Create a ContentValues object where column names are the keys,
             // and pet attributes from the editor are the values.
+        ContentValues values = new ContentValues();
             values.put(PetEntry.COLUMN_PET_NAME, nameString);
             values.put(PetEntry.COLUMN_PET_BREED, breedString);
             values.put(PetEntry.COLUMN_PET_GENDER, mGender);
+
+            /*
+             * If the weight is not provided by the user, don't try to parse the string into an
+             * integer value. Use 0 by default.
+             */
+            int weight = 0;
+
+            if (!TextUtils.isEmpty(weightString)) {
+                weight = Integer.parseInt(weightString);
+            }
             values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
+
+            // Determine if this is a new or existing pet by checking if currentPetUri is null or not
+            if (currentPetUri == null){
 
             // Insert a new pet into the provider, returning the content URI for the new pet.
             Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
@@ -178,20 +250,20 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
                 // Otherwise, the insertion was successful and we can display a toast.
                 Toast.makeText(this, getString(R.string.insert_pet_successful), Toast.LENGTH_SHORT).show();
             }
-        } else{
-        /**
+        } else {
+        /*
          * Otherwise this is an EXISTING pet, so update the pet with content URI: currentPetUri and
          * pass in the new ContentValues. Pass in null for the selection and selection args because
          * currentPetUri will already identify the correct row in the database that we want to
          * modify.
          */
-        int rowsAffected = getContentResolver().update(currentPetUri, values, null, null);
+            int rowsAffected = getContentResolver().update(currentPetUri, values, null, null);
 
-        // Show a toast message depending on whether or not the update was successful
+            // Show a toast message depending on whether or not the update was successful
             if (rowsAffected == 0) {
                 // If no rows were affected, then there was an error with the update
                 Toast.makeText(this, R.string.insert_pet_failed, Toast.LENGTH_SHORT).show();
-            }else {
+            } else {
                 // Otherwise, the update was successful and we can display a toast
                 Toast.makeText(this, getString(R.string.insert_pet_successful), Toast.LENGTH_SHORT).show();
             }
@@ -203,6 +275,24 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         // Inflate the menu options from the res/menu/menu_editor.xml file.
         // This adds menu items to the app bar.
         getMenuInflater().inflate(R.menu.menu_editor, menu);
+        return true;
+    }
+
+    /**
+     * this method is called after invalidateOptionsMenu(), so that the menu can be updated (some
+     * menu items can be hidden or made visible).
+     * @param menu is the options menu
+     * @return true with the "Delete" menu item rendered invisible
+     */
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+
+        // If this is a new pet, hide the "Delete" menu item.
+        if (currentPetUri == null){
+            MenuItem menuItem = menu.findItem(R.id.action_delete);
+            menuItem.setVisible(false);
+        }
         return true;
     }
 
@@ -219,20 +309,71 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
-                // Do nothing for now
+                // Pop up confirmation dialog for deletion
+                showDeleteConfirmationDialog();
                 return true;
             // Respond to a click on the "Up" arrow button in the app bar
             case android.R.id.home:
-                // Navigate back to parent activity (CatalogActivity)
-                NavUtils.navigateUpFromSameTask(this);
+                /*
+                 * If the pet hasn't changed, continue with navigating up to parent activity which
+                 * is the {@link CatalogActivity}.
+                 */
+                if (!petHasChanged) {
+                    NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                    return true;
+                }
+
+                /*
+                 * Otherwise if there are unsaved changes, setup a dialog to warn the user. Create a
+                 * click listener to handle the user confirming that changes should be discarded.
+                 */
+                DialogInterface.OnClickListener discardButtonClickListener =
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                // User clicked "Discard" button, navigate to parent activity.
+                                NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                            }
+                        };
+
+                // show a dialog that notifies the user they have unsaved changes
+                showUnsavedChangesDialog(discardButtonClickListener);
                 return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * This method is called when the back button is pressed
+     */
+    @Override
+    public void onBackPressed() {
+        // If the pet hasn't changed, continue with handling back button press
+        if (!petHasChanged) {
+            super.onBackPressed();
+            return;
+        }
+
+        /*
+         * Otherwise if there are unsaved changes, setup a dialog to warn the user. Create a click
+         * listener to handle the user confiming that changes should be discarded.
+         */
+        DialogInterface.OnClickListener discardButtonClickListener =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // User clicked "Discard" button, close the current activity.
+                        finish();
+                    }
+                };
+
+        // Show dialog that there are unsaved changes
+        showUnsavedChangesDialog(discardButtonClickListener);
+    }
+
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        /**
+        /*
          * Since the editor shows all pet attributes, define a projection that contains all columns
          * from the pet table.
          */
@@ -257,7 +398,11 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
 
-        /**
+        // Bail early if the cursor is null or there is less than 1 row in the cursor
+        if (cursor == null || cursor.getCount() < 1)
+            return;
+
+        /*
          * Proceed with moving to the first row of the cursor and reading data from it. (This should
          * be the only row in the cursor)
          */
@@ -279,12 +424,12 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             mBreedEditText.setText(breed);
             mWeightEditText.setText(Integer.toString(weight));
 
-            /**
+            /*
              * Gender is a dropdown spinner, so map the constant value from the database into one of
              * the dropdown options (0 is Unknown, 1 is Male, 2 is Female). Then call setSelection()
              * so that option is displayed on screen as the current selection.
              */
-            switch (gender){
+            switch (gender) {
                 case PetEntry.GENDER_MALE:
                     mGenderSpinner.setSelection(1);
                     break;
@@ -302,5 +447,104 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
 
+        // If the loader is invalidated, clear out all the data from the input fields.
+        mNameEditText.setText("");
+        mBreedEditText.setText("");
+        mWeightEditText.setText("");
+        mGenderSpinner.setSelection(0); // Select "Unknown" gender
+
+    }
+
+    /**
+     * Show a dialog that warns the user there are unsaved changes that will be lost if they
+     * continue leaving the editor.
+     *
+     * @param discardButtonClickListener is the click listener for what to do when the user confirms
+     *                                   they want to discard their changes.
+     */
+    private void showUnsavedChangesDialog(
+            DialogInterface.OnClickListener discardButtonClickListener) {
+        /*
+         * Create an AlertDialog.Builder and set the message,a nd click listeners for the positive
+         * and negative buttons on the dialog.
+         */
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.unsaved_changes_dialog_msg);
+        builder.setPositiveButton(R.string.discard, discardButtonClickListener);
+        builder.setNegativeButton(R.string.keep_editing, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                /*
+                 * User clicked the "Keep editing" button, so dismiss the dialog and continue
+                 * editing the pet.
+                 */
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    /**
+     * Prompt the user to confirm that they want to delete this pet.
+     */
+    private void showDeleteConfirmationDialog() {
+        /*
+         * Create an AlertDialog.Builder and set the message, and click listeners for the positive
+         * and negative button on the dialog
+         */
+        AlertDialog.Builder builder = new  AlertDialog.Builder(this);
+        builder.setMessage(R.string.delete_dialog_msg);
+        builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id){
+                // User clicked the "Delete" button, so delete the pet.
+                deletePet();
+            }
+        });
+
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked the "Cancel" button, so dismiss the dialog and continue editing the
+                // pet.
+                if (dialog != null)
+                    dialog.dismiss();
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    /**
+     * Perform the deletion of the pet in the database.
+     */
+    private void deletePet() {
+        // Only perform the delete if this is an existing pet.
+        if (currentPetUri != null) {
+            /*
+             * Call the ContentResolver to delete the pet at the given content URI. Pass in null for
+             * the selection and selection args because the currentPetUri content URI already
+             * identifies the pet that we want.
+             */
+            int rowsDeleted = getContentResolver().delete(currentPetUri, null, null);
+
+            // Show a toast message depending on whether or not the delete was successful.
+            if (rowsDeleted == 0) {
+                // If no rows were deleted, then there was an error with the delete.
+                Toast.makeText(this, getString(R.string.editor_delete_pet_failed),
+                        Toast.LENGTH_SHORT).show();
+            }else {
+                // Otherwise, the delete was successful and we can display a toast.
+                Toast.makeText(this, getString(R.string.editor_delete_pet_successful),
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        // Close the activity
+        finish();
     }
 }

@@ -24,7 +24,7 @@ import com.example.android.pets.data.PetContract.PetEntry;
 /**
  * Database helper for Pets app. Manages database creation and version management.
  */
-public class PetDbHelper extends SQLiteOpenHelper {
+class PetDbHelper extends SQLiteOpenHelper {
 
     public static final String LOG_TAG = PetDbHelper.class.getSimpleName();
 
@@ -41,7 +41,7 @@ public class PetDbHelper extends SQLiteOpenHelper {
      *
      * @param context of the app
      */
-    public PetDbHelper(Context context) {
+    PetDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
